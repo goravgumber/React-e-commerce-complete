@@ -1,0 +1,119 @@
+/* src/pages/AuthForm.css */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  padding: 20px;
+}
+
+.auth-card {
+  background: white;
+  padding: 40px 50px;
+  border-radius: 25px;
+  box-shadow:
+    0 8px 24px rgba(102, 126, 234, 0.4),
+    0 12px 48px rgba(118, 75, 162, 0.3);
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  color: #2c3e50;
+  user-select: none;
+  transition: transform 0.3s ease;
+}
+
+.auth-card:hover {
+  transform: translateY(-8px);
+  box-shadow:
+    0 12px 36px rgba(102, 126, 234, 0.6),
+    0 16px 56px rgba(118, 75, 162, 0.5);
+}
+
+.auth-card h2 {
+  margin-bottom: 25px;
+  font-size: 2.25rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  user-select: text;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.auth-form input {
+  padding: 15px 18px;
+  font-size: 1.1rem;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  outline-offset: 3px;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.auth-form input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 12px rgba(102, 126, 234, 0.6);
+}
+
+.auth-form button {
+  padding: 16px 20px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 15px;
+  cursor: pointer;
+  transition:
+    background-color 0.35s ease,
+    box-shadow 0.35s ease;
+  user-select: none;
+  letter-spacing: 1px;
+}
+
+.auth-form button:hover:not(:disabled) {
+  background: #5563c1;
+  box-shadow: 0 6px 14px rgba(85, 99, 193, 0.7);
+}
+
+.auth-form button:disabled {
+  background: #a3a9cc;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.error {
+  color: #e74c3c;
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-top: -10px;
+  margin-bottom: 6px;
+  user-select: text;
+  letter-spacing: 0.02em;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 30px 25px;
+  }
+
+  .auth-card h2 {
+    font-size: 1.8rem;
+  }
+
+  .auth-form input {
+    font-size: 1rem;
+  }
+
+  .auth-form button {
+    font-size: 1.1rem;
+  }
+}

@@ -1,0 +1,76 @@
+/* Modal.css */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  z-index: 1000;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fffbe6;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(255, 222, 89, 0.6);
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 1001;
+  padding: 1.5rem;
+  animation: modalFadeIn 0.3s ease forwards;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -45%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #222;
+  font-weight: 700;
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #ff4c4c;
+  font-weight: 700;
+  transition: color 0.3s ease;
+}
+
+.modal-close-btn:hover,
+.modal-close-btn:focus {
+  color: #ff2929;
+  outline: none;
+}
+
+.modal-content {
+  font-size: 1rem;
+  color: #333;
+  user-select: text;
+}

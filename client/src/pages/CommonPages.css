@@ -1,0 +1,151 @@
+/* src/pages/CommonPages.css */
+
+.common-page {
+  max-width: 650px;
+  margin: 50px auto 80px;
+  padding: 30px 25px;
+  background: #f0f4f8;
+  border-radius: 15px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #222;
+}
+
+.common-page h2 {
+  text-align: center;
+  font-weight: 800;
+  margin-bottom: 25px;
+  color: #2c3e50;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.common-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.common-form label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #444;
+}
+
+.common-form input,
+.common-form textarea {
+  padding: 12px 15px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  border: 1.5px solid #bbb;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+  resize: vertical;
+}
+
+.common-form input:focus,
+.common-form textarea:focus {
+  outline: none;
+  border-color: #2980b9;
+  box-shadow: 0 0 8px rgba(41, 128, 185, 0.5);
+}
+
+.common-form button {
+  background-color: #2980b9;
+  border: none;
+  padding: 14px 0;
+  border-radius: 12px;
+  color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.35s ease;
+}
+
+.common-form button:hover:not(:disabled) {
+  background-color: #1c5980;
+}
+
+.common-form button:disabled {
+  background-color: #7f8c8d;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #e74c3c;
+  font-weight: 600;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.success {
+  color: #27ae60;
+  font-weight: 600;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+/* HomePage specific */
+
+.home-page .home-content {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.home-page h1 {
+  font-size: 2.8rem;
+  margin-bottom: 15px;
+  font-weight: 900;
+  color: #2980b9;
+}
+
+.home-page p {
+  font-size: 1.3rem;
+  margin-bottom: 30px;
+  color: #555;
+}
+
+.btn-primary {
+  background-color: #2980b9;
+  color: white !important;
+  padding: 12px 30px;
+  font-weight: 700;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+  display: inline-block;
+}
+
+.btn-primary:hover {
+  background-color: #1c5980;
+}
+
+/* NotFoundPage */
+
+.notfound-page p {
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+}
+
+/* ContactPage textarea resize */
+
+.common-form textarea {
+  min-height: 100px;
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+  .common-page {
+    margin: 30px 15px 60px;
+    padding: 20px 15px;
+  }
+
+  .home-page h1 {
+    font-size: 2.2rem;
+  }
+
+  .common-form button {
+    font-size: 1rem;
+  }
+}

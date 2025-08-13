@@ -1,0 +1,124 @@
+/* src/components/CartItem.css */
+
+.cart-item {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: #f9f9f9;
+  padding: 18px 20px;
+  border-radius: 16px;
+  box-shadow:
+    4px 4px 8px #d7dbde,
+    -4px -4px 8px #ffffff;
+  transition: box-shadow 0.3s ease;
+  outline-offset: 3px;
+  cursor: default;
+}
+
+.cart-item:focus-within,
+.cart-item:hover {
+  box-shadow:
+    6px 6px 12px #c5c7ca,
+    -6px -6px 12px #ffffff;
+  background: #f1f3f5;
+}
+
+.cart-item-image {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+  border-radius: 14px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.cart-item-details {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cart-item-details h4 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.price {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #27ae60;
+  margin: 0;
+}
+
+.quantity-label {
+  font-size: 0.9rem;
+  color: #555;
+  font-weight: 600;
+  margin-bottom: 4px;
+  user-select: none;
+}
+
+.cart-quantity-input {
+  width: 70px;
+  padding: 8px 12px;
+  font-size: 1rem;
+  border: 2px solid #d1d5db;
+  border-radius: 10px;
+  outline-offset: 2px;
+  transition: border-color 0.3s ease;
+}
+
+.cart-quantity-input:focus {
+  border-color: #2980b9;
+  box-shadow: 0 0 8px rgba(41, 128, 185, 0.6);
+}
+
+.remove-btn {
+  background-color: #e74c3c;
+  border: none;
+  color: white;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 14px;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 5px 12px rgba(231, 76, 60, 0.5);
+  transition:
+    background-color 0.3s ease,
+    box-shadow 0.3s ease;
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.remove-btn:hover,
+.remove-btn:focus {
+  background-color: #b02b20;
+  box-shadow: 0 7px 16px rgba(176, 43, 32, 0.7);
+  outline: none;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .cart-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .cart-item-image {
+    width: 100%;
+    height: auto;
+  }
+
+  .cart-quantity-input {
+    width: 100%;
+  }
+
+  .remove-btn {
+    width: 100%;
+    text-align: center;
+  }
+}

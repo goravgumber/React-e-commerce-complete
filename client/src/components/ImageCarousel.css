@@ -1,0 +1,97 @@
+/* ImageCarousel.css */
+
+.carousel-container {
+  position: relative;
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  user-select: none;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.carousel-wrapper {
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(255, 222, 89, 0.3);
+  position: relative;
+}
+
+.carousel-slide {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.carousel-slide.active {
+  opacity: 1;
+  position: relative;
+}
+
+.carousel-image {
+  width: 100%;
+  display: block;
+  border-radius: 12px;
+  object-fit: cover;
+  max-height: 400px;
+}
+
+.carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(255, 222, 89, 0.8);
+  border: none;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  border-radius: 50%;
+  box-shadow: 0 4px 10px rgba(255, 222, 89, 0.6);
+  transition: background-color 0.3s ease;
+  color: #222;
+  font-size: 1.4rem;
+  user-select: none;
+  z-index: 10;
+}
+
+.carousel-arrow:hover,
+.carousel-arrow:focus {
+  background-color: #ffd93b;
+  outline: none;
+}
+
+.left-arrow {
+  left: 12px;
+}
+
+.right-arrow {
+  right: 12px;
+}
+
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+  gap: 0.5rem;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  background-color: #ffde59;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  box-shadow: 0 4px 10px rgba(255, 222, 89, 0.6);
+}
+
+.dot.active,
+.dot:hover,
+.dot:focus {
+  background-color: #ffd93b;
+  outline: none;
+  box-shadow: 0 6px 16px rgba(255, 217, 0, 0.8);
+}

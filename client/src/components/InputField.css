@@ -1,0 +1,53 @@
+/* InputField.css */
+
+.input-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.input-label {
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+  color: #222;
+  user-select: none;
+}
+
+.required {
+  color: #ff4c4c;
+  margin-left: 0.15rem;
+}
+
+.input-control {
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 2px solid #ccc;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+  outline-offset: 3px;
+}
+
+.input-control:focus {
+  border-color: #ffde59;
+  box-shadow: 0 0 8px #ffde59;
+  outline: none;
+}
+
+.input-error {
+  border-color: #dc3545;
+}
+
+.input-error:focus {
+  box-shadow: 0 0 8px #dc3545;
+}
+
+.input-error-message {
+  margin-top: 0.25rem;
+  color: #dc3545;
+  font-size: 0.85rem;
+  font-weight: 600;
+  user-select: none;
+}

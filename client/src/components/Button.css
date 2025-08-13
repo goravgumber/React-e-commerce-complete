@@ -1,0 +1,103 @@
+/* Button.css */
+
+.btn {
+  cursor: pointer;
+  font-weight: 600;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  border-radius: 30px;
+  padding: 0.6rem 1.6rem;
+  font-size: 1rem;
+  transition:
+    background-color 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.15s ease;
+  user-select: none;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  outline-offset: 3px;
+  text-align: center;
+}
+
+.btn-primary {
+  background-color: #ffde59;
+  color: #222;
+  box-shadow: 0 5px 15px rgba(255, 222, 89, 0.6);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: #ffd93b;
+  box-shadow: 0 8px 25px rgba(255, 222, 89, 0.85);
+  outline: none;
+  transform: scale(1.05);
+}
+
+.btn-primary:active {
+  transform: scale(0.95);
+  box-shadow: 0 4px 10px rgba(255, 222, 89, 0.9);
+}
+
+.btn-secondary {
+  background-color: #2d2d2d;
+  color: #fff;
+  box-shadow: 0 5px 15px rgba(45, 45, 45, 0.4);
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus {
+  background-color: #444;
+  box-shadow: 0 8px 25px rgba(45, 45, 45, 0.6);
+  outline: none;
+  transform: scale(1.05);
+}
+
+.btn-secondary:active {
+  transform: scale(0.95);
+  box-shadow: 0 4px 10px rgba(45, 45, 45, 0.8);
+}
+
+.btn-danger {
+  background-color: #ff4c4c;
+  color: #fff;
+  box-shadow: 0 5px 15px rgba(255, 76, 76, 0.6);
+}
+
+.btn-danger:hover,
+.btn-danger:focus {
+  background-color: #ff2929;
+  box-shadow: 0 8px 25px rgba(255, 76, 76, 0.85);
+  outline: none;
+  transform: scale(1.05);
+}
+
+.btn-danger:active {
+  transform: scale(0.95);
+  box-shadow: 0 4px 10px rgba(255, 76, 76, 1);
+}
+
+.btn-disabled,
+.btn-disabled:hover,
+.btn-disabled:focus,
+.btn-disabled:active {
+  cursor: not-allowed;
+  background-color: #ccc !important;
+  color: #666 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  outline: none !important;
+}
+
+/* Small size variant */
+.btn-small {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.875rem;
+}
+
+/* Icon inside button spacing */
+.btn svg {
+  vertical-align: middle;
+}
