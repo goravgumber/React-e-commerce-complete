@@ -1,17 +1,28 @@
-const db = require("../config/db");
+const prisma = require("../lib/prisma");
 
-// GET all products (Public)
+const serializeProduct = (product) => ({
+  id: product.id,
+  name: product.name,
+  description: product.description || "",
+  price: Number(product.price),
+  stock: product.stock,
+  image: product.image || "",
+  created_at: product.createdAt,
+});
+
 exports.getProducts = async (req, res) => {
   try {
-    const [results] = await db.query("SELECT * FROM products");
-    res.json(results);
+    const products = await prisma.product.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+
+    return res.json(products.map(serializeProduct));
   } catch (err) {
     console.error("Error fetching products:", err);
-    res.status(500).json({ message: "Error fetching products" });
+    return res.status(500).json({ message: "Error fetching products" });
   }
 };
 
-// ADD new product (Protected)
 exports.addProduct = async (req, res) => {
   const { name, description, price, stock, image } = req.body;
 
@@ -19,49 +30,97 @@ exports.addProduct = async (req, res) => {
     return res.status(400).json({ message: "Name, price, and stock are required" });
   }
 
-  try {
-    const [result] = await db.query(
-      "INSERT INTO products (name, description, price, stock, image) VALUES (?, ?, ?, ?, ?)",
-      [name, description || "", price, stock, image || ""]
-    );
+  const parsedPrice = Number(price);
+  const parsedStock = Number(stock);
 
-    res.status(201).json({ message: "Product added", productId: result.insertId });
+  if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+    return res.status(400).json({ message: "Price must be a valid non-negative number" });
+  }
+
+  if (!Number.isInteger(parsedStock) || parsedStock < 0) {
+    return res.status(400).json({ message: "Stock must be a non-negative integer" });
+  }
+
+  try {
+    const product = await prisma.product.create({
+      data: {
+        name: String(name).trim(),
+        description: description ? String(description).trim() : "",
+        price: parsedPrice,
+        stock: parsedStock,
+        image: image ? String(image).trim() : "",
+      },
+    });
+
+    return res.status(201).json({ message: "Product added", productId: product.id });
   } catch (err) {
     console.error("Error adding product:", err);
-    res.status(500).json({ message: "Error adding product" });
+    return res.status(500).json({ message: "Error adding product" });
   }
 };
 
-// UPDATE product by ID (Protected)
 exports.updateProduct = async (req, res) => {
-  const productId = req.params.id;
+  const productId = Number(req.params.id);
   const { name, description, price, stock, image } = req.body;
+
+  if (!Number.isInteger(productId) || productId <= 0) {
+    return res.status(400).json({ message: "Invalid product id" });
+  }
 
   if (!name || price === undefined || stock === undefined) {
     return res.status(400).json({ message: "Name, price, and stock are required" });
   }
 
+  const parsedPrice = Number(price);
+  const parsedStock = Number(stock);
+
+  if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+    return res.status(400).json({ message: "Price must be a valid non-negative number" });
+  }
+
+  if (!Number.isInteger(parsedStock) || parsedStock < 0) {
+    return res.status(400).json({ message: "Stock must be a non-negative integer" });
+  }
+
   try {
-    await db.query(
-      "UPDATE products SET name=?, description=?, price=?, stock=?, image=? WHERE id=?",
-      [name, description || "", price, stock, image || "", productId]
-    );
-    res.json({ message: "Product updated" });
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        name: String(name).trim(),
+        description: description ? String(description).trim() : "",
+        price: parsedPrice,
+        stock: parsedStock,
+        image: image ? String(image).trim() : "",
+      },
+    });
+
+    return res.json({ message: "Product updated" });
   } catch (err) {
+    if (err.code === "P2025") {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
     console.error("Error updating product:", err);
-    res.status(500).json({ message: "Error updating product" });
+    return res.status(500).json({ message: "Error updating product" });
   }
 };
 
-// DELETE product by ID (Protected)
 exports.deleteProduct = async (req, res) => {
-  const productId = req.params.id;
+  const productId = Number(req.params.id);
+
+  if (!Number.isInteger(productId) || productId <= 0) {
+    return res.status(400).json({ message: "Invalid product id" });
+  }
 
   try {
-    await db.query("DELETE FROM products WHERE id=?", [productId]);
-    res.json({ message: "Product deleted" });
+    await prisma.product.delete({ where: { id: productId } });
+    return res.json({ message: "Product deleted" });
   } catch (err) {
+    if (err.code === "P2025") {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
     console.error("Error deleting product:", err);
-    res.status(500).json({ message: "Error deleting product" });
+    return res.status(500).json({ message: "Error deleting product" });
   }
 };

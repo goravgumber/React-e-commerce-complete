@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useCart } from "../context/CartContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import CartItem from "../components/CartItem";
 import Loader from "../components/Loader";
 import Modal from "../components/Modal";
@@ -8,22 +8,28 @@ import ToastNotification from "../components/ToastNotification";
 import "./CartPage.css";
 
 const CartPage = () => {
-  const { cart, updateCartItem, removeFromCart, clearCart, cartCount } =
-    useCart();
+  const { cart, updateCartItem, removeFromCart, clearCart, cartCount } = useCart();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    const paymentStatus = searchParams.get("payment");
+    if (paymentStatus === "cancelled") {
+      ToastNotification.info("Payment was cancelled. You can retry checkout anytime.");
+    }
+  }, [searchParams]);
 
   const handleQuantityChange = async (cartItemId, newQty) => {
     if (newQty <= 0) return;
     setLoading(true);
     try {
-      await updateCartItem(cartItemId, newQty); // assuming async update, e.g. API call
-      setToast({ type: "success", message: "Quantity updated" });
+      await updateCartItem(cartItemId, newQty);
+      ToastNotification.success("Quantity updated");
     } catch {
-      setToast({ type: "error", message: "Failed to update quantity" });
+      ToastNotification.error("Failed to update quantity");
     } finally {
       setLoading(false);
     }
@@ -33,9 +39,9 @@ const CartPage = () => {
     setLoading(true);
     try {
       await removeFromCart(cartItemId);
-      setToast({ type: "success", message: "Item removed" });
+      ToastNotification.success("Item removed");
     } catch {
-      setToast({ type: "error", message: "Failed to remove item" });
+      ToastNotification.error("Failed to remove item");
     } finally {
       setLoading(false);
     }
@@ -45,21 +51,18 @@ const CartPage = () => {
     setLoading(true);
     try {
       await clearCart();
-      setToast({ type: "success", message: "Cart cleared" });
+      ToastNotification.success("Cart cleared");
       setModalOpen(false);
     } catch {
-      setToast({ type: "error", message: "Failed to clear cart" });
+      ToastNotification.error("Failed to clear cart");
     } finally {
       setLoading(false);
     }
   };
 
-  const totalPrice = cart.reduce(
-    (acc, item) => acc + item.price * item.quantity,
-    0,
-  );
+  const totalPrice = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
-  if (cart.length === 0 && !loading)
+  if (cart.length === 0 && !loading) {
     return (
       <div className="cart-page empty">
         <h2>Your Cart is Empty</h2>
@@ -68,6 +71,7 @@ const CartPage = () => {
         </button>
       </div>
     );
+  }
 
   return (
     <div className="cart-page">
@@ -79,21 +83,12 @@ const CartPage = () => {
         </div>
       )}
 
-      {toast && (
-        <ToastNotification
-          type={toast.type}
-          message={toast.message}
-          onClose={() => setToast(null)}
-          duration={3000}
-        />
-      )}
-
       {!loading && cart.length > 0 && (
         <>
           <div className="cart-list">
             {cart.map((item) => (
               <CartItem
-                key={item.cart_id}
+                key={item.id}
                 item={item}
                 onUpdateQuantity={handleQuantityChange}
                 onRemove={handleRemove}
@@ -104,10 +99,7 @@ const CartPage = () => {
           <div className="cart-summary">
             <h3>Total: ₹{totalPrice.toFixed(2)}</h3>
             <div className="cart-buttons">
-              <button
-                className="checkout-btn"
-                onClick={() => navigate("/checkout")}
-              >
+              <button className="checkout-btn" onClick={() => navigate("/shipping")}>
                 Proceed to Checkout
               </button>
               <button className="clear-btn" onClick={() => setModalOpen(true)}>
@@ -127,19 +119,13 @@ const CartPage = () => {
             <button className="modal-btn confirm" onClick={handleClearCart}>
               Yes, Clear
             </button>
-            <button
-              className="modal-btn cancel"
-              onClick={() => setModalOpen(false)}
-            >
+            <button className="modal-btn cancel" onClick={() => setModalOpen(false)}>
               Cancel
             </button>
           </>
         }
       >
-        <p>
-          Are you sure you want to clear all items from your cart? This action
-          cannot be undone.
-        </p>
+        <p>Are you sure you want to clear all items from your cart? This action cannot be undone.</p>
       </Modal>
     </div>
   );

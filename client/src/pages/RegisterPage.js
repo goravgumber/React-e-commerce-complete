@@ -1,4 +1,3 @@
-// src/pages/RegisterPage.js
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -23,9 +22,9 @@ const RegisterPage = () => {
 
     try {
       await register(form.name, form.email, form.password);
-      navigate("/login"); // Redirect to login after successful register
+      navigate("/login");
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
+      setError(err.message || "Registration failed");
     } finally {
       setLoading(false);
     }

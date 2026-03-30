@@ -1,18 +1,18 @@
-// src/pages/ProfilePage.js
 import React, { useState, useEffect } from "react";
-// import axios from "../axios"; // Removed unused import
 import { useAuth } from "../context/AuthContext";
 import "./CommonPages.css";
 
 const ProfilePage = () => {
-  const { user, updateUser } = useAuth(); // Assume updateUser in context for API call
+  const { user, updateProfile } = useAuth();
   const [form, setForm] = useState({ name: "", email: "" });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (user) setForm({ name: user.name, email: user.email });
+    if (user) {
+      setForm({ name: user.name || "", email: user.email || "" });
+    }
   }, [user]);
 
   const handleChange = (e) =>
@@ -25,10 +25,10 @@ const ProfilePage = () => {
     setSuccess(null);
 
     try {
-      await updateUser(form);
+      await updateProfile(form);
       setSuccess("Profile updated successfully.");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to update profile.");
+      setError(err.message || "Failed to update profile.");
     } finally {
       setLoading(false);
     }

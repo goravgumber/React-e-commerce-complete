@@ -1,9 +1,11 @@
-// src/axios.js
 import axios from "axios";
 
+export const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api";
+
 const instance = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api",
-  withCredentials: true, // to send cookies (for auth token)
+  baseURL: API_BASE_URL,
+  withCredentials: true,
 });
 
 export default instance;

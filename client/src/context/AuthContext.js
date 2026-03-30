@@ -1,25 +1,18 @@
-// src/context/AuthContext.js
 import { createContext, useContext, useState, useEffect } from "react";
-import axios from "axios"; // Use plain axios here to specify full URLs explicitly
+import axios from "../axios";
 import ToastNotification from "../components/ToastNotification";
 
 const AuthContext = createContext(null);
 
-const API_BASE = "http://localhost:5000/api/auth";
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true); // true until first check is done
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const checkAuth = async () => {
     setAuthLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/me`, { withCredentials: true });
+      const res = await axios.get("/auth/me");
       setUser(res.data);
       setIsAuthenticated(true);
     } catch {
@@ -30,53 +23,52 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
   const login = async (email, password) => {
     try {
-      const res = await axios.post(
-        `${API_BASE}/login`,
-        { email, password },
-        { withCredentials: true },
-      );
+      const res = await axios.post("/auth/login", { email, password });
       setUser(res.data.user);
       setIsAuthenticated(true);
       ToastNotification.success("Login successful!");
-      return { success: true };
+      return res.data.user;
     } catch (err) {
-      ToastNotification.error(err.response?.data?.message || "Login failed");
-      return { success: false };
+      const message = err.response?.data?.message || "Login failed";
+      ToastNotification.error(message);
+      throw new Error(message);
     }
   };
 
   const register = async (name, email, password) => {
     try {
-      await axios.post(
-        `${API_BASE}/register`,
-        { name, email, password },
-        { withCredentials: true },
-      );
+      await axios.post("/auth/register", { name, email, password });
       ToastNotification.success("Account created successfully!");
-      return { success: true };
+      return true;
     } catch (err) {
-      ToastNotification.error(err.response?.data?.message || "Register failed");
-      return { success: false };
+      const message = err.response?.data?.message || "Register failed";
+      ToastNotification.error(message);
+      throw new Error(message);
     }
   };
 
   const updateProfile = async (updates) => {
     try {
-      const res = await axios.put(`${API_BASE}/update`, updates, {
-        withCredentials: true,
-      });
+      const res = await axios.put("/auth/update", updates);
       setUser(res.data.user);
       ToastNotification.success("Profile updated!");
+      return res.data.user;
     } catch (err) {
-      ToastNotification.error(err.response?.data?.message || "Update failed");
+      const message = err.response?.data?.message || "Update failed";
+      ToastNotification.error(message);
+      throw new Error(message);
     }
   };
 
   const logout = async () => {
     try {
-      await axios.post(`${API_BASE}/logout`, {}, { withCredentials: true });
+      await axios.post("/auth/logout", {});
     } finally {
       setUser(null);
       setIsAuthenticated(false);
@@ -93,6 +85,7 @@ export const AuthProvider = ({ children }) => {
         register,
         logout,
         updateProfile,
+        updateUser: updateProfile,
         checkAuth,
       }}
     >

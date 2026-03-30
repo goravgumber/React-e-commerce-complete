@@ -1,21 +1,19 @@
 import React from "react";
 import "./CartItem.css";
 
+import { IMAGE_BASE_URL } from "../config";
+
 const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
   const handleQuantityChange = (e) => {
-    let qty = parseInt(e.target.value);
-    if (isNaN(qty) || qty < 1) qty = 1;
-    onUpdateQuantity(item.cart_id, qty);
+    let qty = parseInt(e.target.value, 10);
+    if (Number.isNaN(qty) || qty < 1) qty = 1;
+    onUpdateQuantity(item.id, qty);
   };
 
   return (
-    <div
-      className="cart-item"
-      tabIndex={0}
-      aria-label={`Cart item: ${item.name}`}
-    >
+    <div className="cart-item" tabIndex={0} aria-label={`Cart item: ${item.name}`}>
       <img
-        src={`http://localhost:5000/images/${item.image}`}
+        src={`${IMAGE_BASE_URL}/${item.image}`}
         alt={item.name}
         className="cart-item-image"
         loading="lazy"
@@ -23,11 +21,11 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
       <div className="cart-item-details">
         <h4>{item.name}</h4>
         <p className="price">Price: ₹{item.price}</p>
-        <label htmlFor={`qty-${item.cart_id}`} className="quantity-label">
+        <label htmlFor={`qty-${item.id}`} className="quantity-label">
           Quantity:
         </label>
         <input
-          id={`qty-${item.cart_id}`}
+          id={`qty-${item.id}`}
           type="number"
           min="1"
           value={item.quantity}
@@ -39,7 +37,7 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
         />
       </div>
       <button
-        onClick={() => onRemove(item.cart_id)}
+        onClick={() => onRemove(item.id)}
         className="remove-btn"
         aria-label={`Remove ${item.name} from cart`}
         title="Remove item"

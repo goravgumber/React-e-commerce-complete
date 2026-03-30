@@ -1,4 +1,3 @@
-// src/pages/OrderDetailPage.js
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "../axios";
@@ -19,11 +18,11 @@ const OrderDetailPage = () => {
         setOrder(res.data);
       } catch (err) {
         setError("Failed to load order details.");
-        console.error(err);
       } finally {
         setLoading(false);
       }
     };
+
     fetchOrder();
   }, [id]);
 
@@ -38,16 +37,19 @@ const OrderDetailPage = () => {
         <strong>Date:</strong> {new Date(order.created_at).toLocaleString()}
       </p>
       <p>
-        <strong>Total:</strong> ₹{order.total.toFixed(2)}
+        <strong>Total:</strong> ₹{Number(order.total).toFixed(2)}
+      </p>
+      <p>
+        <strong>Status:</strong> {order.payment_status || "pending"}
       </p>
 
       <h3>Items</h3>
       <ul className="items-list">
-        {order.items.map((item) => (
-          <li key={item.id} className="item-row">
+        {(order.items || []).map((item) => (
+          <li key={item.product_id} className="item-row">
             <span className="item-name">{item.name}</span>
             <span>Qty: {item.quantity}</span>
-            <span>₹{item.price.toFixed(2)}</span>
+            <span>₹{Number(item.price).toFixed(2)}</span>
           </li>
         ))}
       </ul>

@@ -1,123 +1,202 @@
-const db = require("../config/db");
+const prisma = require("../lib/prisma");
 
-// Add item to cart or update quantity if exists
+const serializeCartItem = (item) => ({
+  id: item.id,
+  product_id: item.productId,
+  quantity: item.quantity,
+  name: item.product.name,
+  price: Number(item.product.price),
+  image: item.product.image || "",
+});
+
+const getUserCart = async (userId) => {
+  const items = await prisma.cart.findMany({
+    where: { userId },
+    include: {
+      product: {
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          image: true,
+        },
+      },
+    },
+    orderBy: { id: "desc" },
+  });
+
+  return items.map(serializeCartItem);
+};
+
 const addToCart = async (req, res) => {
-  const userId = req.user.id; // from authenticateUser middleware
-  const { product_id, quantity } = req.body;
+  const userId = req.user.id;
+  const productId = Number(req.body.product_id);
+  const quantity = Number(req.body.quantity || 1);
 
-  if (!product_id || !quantity) {
-    return res.status(400).json({ message: "Product ID and quantity are required." });
+  if (!Number.isInteger(productId) || productId <= 0) {
+    return res.status(400).json({ message: "Valid product_id is required." });
+  }
+
+  if (!Number.isInteger(quantity) || quantity <= 0) {
+    return res.status(400).json({ message: "Quantity must be a positive integer." });
   }
 
   try {
-    // Check if item already in cart
-    const [existingItems] = await db.query(
-      "SELECT * FROM cart WHERE user_id = ? AND product_id = ?",
-      [userId, product_id]
-    );
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { id: true, stock: true },
+    });
 
-    if (existingItems.length > 0) {
-      // Update quantity
-      const newQuantity = existingItems[0].quantity + quantity;
-      await db.query(
-        "UPDATE cart SET quantity = ? WHERE user_id = ? AND product_id = ?",
-        [newQuantity, userId, product_id]
-      );
-    } else {
-      // Insert new cart item
-      await db.query(
-        "INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, ?)",
-        [userId, product_id, quantity]
-      );
+    if (!product) {
+      return res.status(404).json({ message: "Product not found." });
     }
 
-    res.status(200).json({ message: "Cart updated successfully." });
+    const existingItem = await prisma.cart.findUnique({
+      where: {
+        userId_productId: {
+          userId,
+          productId,
+        },
+      },
+      select: {
+        id: true,
+        quantity: true,
+      },
+    });
+
+    if (existingItem) {
+      const newQuantity = existingItem.quantity + quantity;
+      if (newQuantity > product.stock) {
+        return res.status(400).json({ message: "Requested quantity exceeds available stock." });
+      }
+
+      await prisma.cart.update({
+        where: { id: existingItem.id },
+        data: { quantity: newQuantity },
+      });
+    } else {
+      if (quantity > product.stock) {
+        return res.status(400).json({ message: "Requested quantity exceeds available stock." });
+      }
+
+      await prisma.cart.create({
+        data: {
+          userId,
+          productId,
+          quantity,
+        },
+      });
+    }
+
+    const cart = await getUserCart(userId);
+    return res.status(200).json({ message: "Cart updated successfully.", items: cart });
   } catch (error) {
     console.error("Add to cart error:", error);
-    res.status(500).json({ message: "Failed to add to cart." });
+    return res.status(500).json({ message: "Failed to add to cart." });
   }
 };
 
-// Get all cart items for the logged-in user
 const getCartItems = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const [cartItems] = await db.query(
-      `SELECT c.id, c.product_id, c.quantity, p.name, p.price
-       FROM cart c
-       JOIN products p ON c.product_id = p.id
-       WHERE c.user_id = ?`,
-      [userId]
-    );
-
-    res.status(200).json(cartItems);
+    const cart = await getUserCart(userId);
+    return res.status(200).json(cart);
   } catch (error) {
     console.error("Get cart items error:", error);
-    res.status(500).json({ message: "Failed to get cart items." });
+    return res.status(500).json({ message: "Failed to get cart items." });
   }
 };
 
-// Update cart item quantity
 const updateCartItem = async (req, res) => {
   const userId = req.user.id;
-  const cartItemId = req.params.id;
-  const { quantity } = req.body;
+  const cartItemId = Number(req.params.id);
+  const quantity = Number(req.body.quantity);
 
-  if (!quantity || quantity < 1) {
+  if (!Number.isInteger(cartItemId) || cartItemId <= 0) {
+    return res.status(400).json({ message: "Invalid cart item id." });
+  }
+
+  if (!Number.isInteger(quantity) || quantity < 1) {
     return res.status(400).json({ message: "Quantity must be at least 1." });
   }
 
   try {
-    // Update the quantity only if the cart item belongs to the user
-    const [result] = await db.query(
-      "UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?",
-      [quantity, cartItemId, userId]
-    );
+    const cartItem = await prisma.cart.findFirst({
+      where: {
+        id: cartItemId,
+        userId,
+      },
+      include: {
+        product: {
+          select: {
+            stock: true,
+          },
+        },
+      },
+    });
 
-    if (result.affectedRows === 0) {
+    if (!cartItem) {
       return res.status(404).json({ message: "Cart item not found." });
     }
 
-    res.status(200).json({ message: "Cart item updated successfully." });
+    if (quantity > cartItem.product.stock) {
+      return res.status(400).json({ message: "Requested quantity exceeds available stock." });
+    }
+
+    await prisma.cart.update({
+      where: { id: cartItemId },
+      data: { quantity },
+    });
+
+    const cart = await getUserCart(userId);
+    return res.status(200).json({ message: "Cart item updated successfully.", items: cart });
   } catch (error) {
     console.error("Update cart item error:", error);
-    res.status(500).json({ message: "Failed to update cart item." });
+    return res.status(500).json({ message: "Failed to update cart item." });
   }
 };
 
-// Remove cart item
 const removeCartItem = async (req, res) => {
   const userId = req.user.id;
-  const cartItemId = req.params.id;
+  const cartItemId = Number(req.params.id);
+
+  if (!Number.isInteger(cartItemId) || cartItemId <= 0) {
+    return res.status(400).json({ message: "Invalid cart item id." });
+  }
 
   try {
-    const [result] = await db.query(
-      "DELETE FROM cart WHERE id = ? AND user_id = ?",
-      [cartItemId, userId]
-    );
+    const result = await prisma.cart.deleteMany({
+      where: {
+        id: cartItemId,
+        userId,
+      },
+    });
 
-    if (result.affectedRows === 0) {
+    if (result.count === 0) {
       return res.status(404).json({ message: "Cart item not found." });
     }
 
-    res.status(200).json({ message: "Cart item removed successfully." });
+    const cart = await getUserCart(userId);
+    return res.status(200).json({ message: "Cart item removed successfully.", items: cart });
   } catch (error) {
     console.error("Remove cart item error:", error);
-    res.status(500).json({ message: "Failed to remove cart item." });
+    return res.status(500).json({ message: "Failed to remove cart item." });
   }
 };
 
-// Clear all cart items for user
 const clearCart = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    await db.query("DELETE FROM cart WHERE user_id = ?", [userId]);
-    res.status(200).json({ message: "Cart cleared successfully." });
+    await prisma.cart.deleteMany({
+      where: { userId },
+    });
+
+    return res.status(200).json({ message: "Cart cleared successfully.", items: [] });
   } catch (error) {
     console.error("Clear cart error:", error);
-    res.status(500).json({ message: "Failed to clear cart." });
+    return res.status(500).json({ message: "Failed to clear cart." });
   }
 };
 

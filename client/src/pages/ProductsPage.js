@@ -18,17 +18,20 @@ const ProductsPage = ({ searchTerm }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const { addToCart } = useCart();
 
-  // Fetch products from backend
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       setError(null);
       try {
         const res = await axios.get("/products");
-        setProducts(res.data);
-        setCurrentPage(1); // reset to first page when products reload
+        const list = Array.isArray(res.data) ? res.data : [];
+        setProducts(list);
+        setFilteredProducts(list);
+        setCurrentPage(1);
       } catch (err) {
-        setError("Failed to load products. Please try again later.");
+        const message = "Failed to load products. Please try again later.";
+        setError(message);
+        ToastNotification.error(message);
       } finally {
         setLoading(false);
       }
@@ -36,7 +39,6 @@ const ProductsPage = ({ searchTerm }) => {
     fetchProducts();
   }, []);
 
-  // Debounced search filter
   const debouncedFilter = useMemo(
     () =>
       debounce((term) => {
@@ -48,7 +50,7 @@ const ProductsPage = ({ searchTerm }) => {
           );
           setFilteredProducts(filtered);
         }
-        setCurrentPage(1); // reset page on search
+        setCurrentPage(1);
       }, 300),
     [products],
   );
@@ -58,7 +60,6 @@ const ProductsPage = ({ searchTerm }) => {
     return () => debouncedFilter.cancel();
   }, [searchTerm, debouncedFilter]);
 
-  // Pagination calculation
   const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE);
   const paginatedProducts = filteredProducts.slice(
     (currentPage - 1) * PAGE_SIZE,
@@ -75,14 +76,7 @@ const ProductsPage = ({ searchTerm }) => {
         </div>
       )}
 
-      {error && (
-        <ToastNotification
-          type="error"
-          message={error}
-          onClose={() => setError(null)}
-          duration={4000}
-        />
-      )}
+      {!loading && error && <p className="no-products">{error}</p>}
 
       {!loading && !error && filteredProducts.length === 0 && (
         <p className="no-products">No products found matching "{searchTerm}"</p>

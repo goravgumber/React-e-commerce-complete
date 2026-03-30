@@ -1,8 +1,7 @@
 const jwt = require("jsonwebtoken");
-const db = require("../config/db");
+const prisma = require("../lib/prisma");
 
 const authenticateUser = async (req, res, next) => {
-  // Try to get token from Authorization header or cookies
   const authHeader = req.headers.authorization;
   let token = null;
 
@@ -13,28 +12,34 @@ const authenticateUser = async (req, res, next) => {
   }
 
   if (!token) {
-    console.error("❌ Token missing");
     return res.status(401).json({ message: "Unauthorized: Token missing" });
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Use async/await with promise pool
-    const [results] = await db.query(
-      "SELECT id, name, email, role FROM users WHERE id = ?",
-      [decoded.id]
-    );
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+    });
 
-    if (results.length === 0) {
-      console.warn(`⚠️ No user found with ID ${decoded.id}`);
+    if (!user) {
       return res.status(401).json({ message: "Unauthorized: User not found" });
     }
 
-    req.user = results[0];
-    next();
+    req.user = {
+      ...user,
+      role: user.role.toLowerCase(),
+    };
+
+    return next();
   } catch (err) {
-    console.error("❌ Invalid token or DB error:", err.message);
+    console.error("Invalid token or auth lookup error:", err.message);
     return res.status(401).json({ message: "Unauthorized: Invalid token" });
   }
 };

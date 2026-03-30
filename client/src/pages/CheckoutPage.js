@@ -4,6 +4,7 @@ import { useCart } from "../context/CartContext";
 import { loadStripe } from "@stripe/stripe-js";
 import Loader from "../components/Loader";
 import ToastNotification from "../components/ToastNotification";
+import { IMAGE_BASE_URL } from "../config";
 import "./CheckoutPage.css";
 
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
@@ -20,81 +21,63 @@ const CheckoutPage = () => {
   });
 
   const [errors, setErrors] = useState({});
-  const [toast, setToast] = useState(null);
 
-  // Calculate total amount
-  const total = cart.reduce(
-    (acc, it) => acc + Number(it.price) * it.quantity,
-    0,
-  );
+  const total = cart.reduce((acc, it) => acc + Number(it.price) * it.quantity, 0);
 
   useEffect(() => {
     fetchCart();
-    // eslint-disable-next-line
-  }, []);
+  }, [fetchCart]);
 
-  // Validation helper
   const validateForm = () => {
     const newErrors = {};
     if (!shipping.name.trim()) newErrors.name = "Full Name is required";
     if (!shipping.address.trim()) newErrors.address = "Address is required";
     if (!shipping.city.trim()) newErrors.city = "City is required";
-    if (!shipping.postalCode.trim())
-      newErrors.postalCode = "Postal Code is required";
+    if (!shipping.postalCode.trim()) newErrors.postalCode = "Postal Code is required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleInputChange = (e) => {
     setShipping({ ...shipping, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: "" }); // Clear error on change
-  };
-
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
+    setErrors({ ...errors, [e.target.name]: "" });
   };
 
   const handleCheckout = async () => {
     if (cart.length === 0) {
-      setToast({ type: "error", message: "Your cart is empty." });
+      ToastNotification.error("Your cart is empty.");
       return;
     }
 
     if (!validateForm()) {
-      setToast({
-        type: "error",
-        message: "Please fill in all required fields.",
-      });
+      ToastNotification.error("Please fill in all required fields.");
       return;
     }
 
     setLoading(true);
 
     try {
-      // Create Stripe Checkout Session via backend
       const { data } = await axios.post("/payments/create-checkout-session", {
-        items: cart,
+        items: cart.map((item) => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+        })),
         shipping,
       });
 
       const stripe = await stripePromise;
+      if (!stripe) {
+        ToastNotification.error("Stripe failed to initialize.");
+        return;
+      }
+
       const { error } = await stripe.redirectToCheckout({ sessionId: data.id });
 
       if (error) {
-        setToast({
-          type: "error",
-          message: "Payment failed: " + error.message,
-        });
-      } else {
-        // Usually redirect happens; but if you want to clear cart or do something post payment success:
-        // clearCart();
-        // navigate("/orders");
+        ToastNotification.error(`Payment failed: ${error.message}`);
       }
     } catch (err) {
-      setToast({
-        type: "error",
-        message: err.response?.data?.message || "Unable to start checkout.",
-      });
+      ToastNotification.error(err.response?.data?.message || "Unable to start checkout.");
     } finally {
       setLoading(false);
     }
@@ -104,10 +87,9 @@ const CheckoutPage = () => {
     <div className="checkout-page">
       <h2>Checkout</h2>
       <div className="checkout-grid">
-        {/* Shipping Form */}
         <div className="checkout-left">
           <h3>Shipping Information</h3>
-          <form onSubmit={handleFormSubmit} noValidate>
+          <form noValidate>
             <input
               type="text"
               name="name"
@@ -126,9 +108,7 @@ const CheckoutPage = () => {
               onChange={handleInputChange}
               className={errors.address ? "input-error" : ""}
             />
-            {errors.address && (
-              <div className="error-text">{errors.address}</div>
-            )}
+            {errors.address && <div className="error-text">{errors.address}</div>}
 
             <input
               type="text"
@@ -148,9 +128,7 @@ const CheckoutPage = () => {
               onChange={handleInputChange}
               className={errors.postalCode ? "input-error" : ""}
             />
-            {errors.postalCode && (
-              <div className="error-text">{errors.postalCode}</div>
-            )}
+            {errors.postalCode && <div className="error-text">{errors.postalCode}</div>}
 
             <input
               type="text"
@@ -162,7 +140,6 @@ const CheckoutPage = () => {
           </form>
         </div>
 
-        {/* Order Summary */}
         <div className="checkout-right">
           <h3>Order Summary</h3>
           {cart.length === 0 ? (
@@ -171,17 +148,15 @@ const CheckoutPage = () => {
             <>
               <div className="summary-list">
                 {cart.map((it) => (
-                  <div className="summary-item" key={it.cart_id}>
-                    <img src={`/images/${it.image}`} alt={it.name} />
+                  <div className="summary-item" key={it.id}>
+                    <img src={`${IMAGE_BASE_URL}/${it.image}`} alt={it.name} />
                     <div>
                       <div className="name">{it.name}</div>
                       <div>
                         Qty: {it.quantity} × ₹{it.price}
                       </div>
                     </div>
-                    <div className="price">
-                      ₹{(it.quantity * it.price).toFixed(2)}
-                    </div>
+                    <div className="price">₹{(it.quantity * it.price).toFixed(2)}</div>
                   </div>
                 ))}
               </div>
@@ -203,15 +178,6 @@ const CheckoutPage = () => {
           )}
         </div>
       </div>
-
-      {toast && (
-        <ToastNotification
-          type={toast.type}
-          message={toast.message}
-          onClose={() => setToast(null)}
-          duration={4000}
-        />
-      )}
     </div>
   );
 };

@@ -1,188 +1,276 @@
-// server/controllers/orderController.js
-const db = require("../config/db");
+const { OrderStatus } = require("@prisma/client");
+const prisma = require("../lib/prisma");
 
-/**
- * Create a new order
- * Body: { items: [{ product_id, quantity, price, name }], total, shipping_id, payment_intent_id }
- */
-exports.createOrder = async (req, res) => {
-  const userId = req.user?.id;
-  const { items, total, shipping_id = null, payment_intent_id = null } = req.body;
-
-  if (!userId) return res.status(401).json({ message: "Unauthorized" });
+const normalizeItemsInput = (items) => {
   if (!Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ message: "Order must contain items" });
-  }
-  if (typeof total !== "number") {
-    return res.status(400).json({ message: "Total must be a number" });
+    throw new Error("Order must contain items");
   }
 
-  let connection;
-  try {
-    connection = await db.getConnection();
-    await connection.beginTransaction();
+  const normalized = items.map((item) => ({
+    product_id: Number(item.product_id),
+    quantity: Number(item.quantity),
+  }));
 
-    // 1) Check stock for each item
-    for (const it of items) {
-      const [rows] = await connection.query(
-        "SELECT stock FROM products WHERE id = ?",
-        [it.product_id]
-      );
-      if (!rows.length || rows[0].stock < it.quantity) {
-        throw new Error(
-          `Insufficient stock for ${it.name || "product " + it.product_id}`
-        );
+  for (const item of normalized) {
+    if (!Number.isInteger(item.product_id) || item.product_id <= 0) {
+      throw new Error("Invalid product_id in items");
+    }
+    if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+      throw new Error("Quantity must be a positive integer");
+    }
+  }
+
+  return normalized;
+};
+
+const prepareValidatedItems = async (items, tx = prisma) => {
+  const normalizedItems = normalizeItemsInput(items);
+  const productIds = [...new Set(normalizedItems.map((item) => item.product_id))];
+
+  const products = await tx.product.findMany({
+    where: {
+      id: { in: productIds },
+    },
+    select: {
+      id: true,
+      name: true,
+      price: true,
+      stock: true,
+      image: true,
+    },
+  });
+
+  if (products.length !== productIds.length) {
+    throw new Error("One or more products were not found");
+  }
+
+  const productMap = new Map(products.map((product) => [product.id, product]));
+
+  let total = 0;
+  const validatedItems = normalizedItems.map((item) => {
+    const product = productMap.get(item.product_id);
+
+    if (!product) {
+      throw new Error(`Product ${item.product_id} not found`);
+    }
+
+    if (product.stock < item.quantity) {
+      throw new Error(`Insufficient stock for ${product.name}`);
+    }
+
+    const unitPrice = Number(product.price);
+    total += unitPrice * item.quantity;
+
+    return {
+      product_id: product.id,
+      quantity: item.quantity,
+      unit_price: unitPrice,
+      name: product.name,
+      image: product.image || "",
+    };
+  });
+
+  return {
+    validatedItems,
+    total: Number(total.toFixed(2)),
+  };
+};
+
+const mapStatusToEnum = (status) => {
+  if (!status) return OrderStatus.PENDING;
+  const normalized = String(status).toUpperCase();
+  return OrderStatus[normalized] || OrderStatus.PENDING;
+};
+
+const serializeOrder = (order) => ({
+  id: order.id,
+  total: Number(order.total),
+  created_at: order.createdAt,
+  payment_status: String(order.status).toLowerCase(),
+  items: (order.items || []).map((item) => ({
+    id: item.productId,
+    product_id: item.productId,
+    quantity: item.quantity,
+    price: Number(item.price),
+    name: item.product?.name || "",
+    image: item.product?.image || "",
+  })),
+});
+
+const createOrderWithTransaction = async ({
+  userId,
+  items,
+  shipping_id = null,
+  payment_intent_id = null,
+  payment_status = OrderStatus.PENDING,
+  clearCart = true,
+}) => {
+  if (!userId) {
+    throw new Error("Unauthorized");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    if (payment_intent_id) {
+      const existingOrder = await tx.order.findFirst({
+        where: { paymentIntentId: payment_intent_id },
+        select: { id: true },
+      });
+
+      if (existingOrder) {
+        return {
+          orderId: existingOrder.id,
+          total: null,
+          alreadyExists: true,
+        };
       }
     }
 
-    // 2) Deduct stock
-    for (const it of items) {
-      await connection.query(
-        "UPDATE products SET stock = stock - ? WHERE id = ?",
-        [it.quantity, it.product_id]
-      );
+    const { validatedItems, total } = await prepareValidatedItems(items, tx);
+
+    for (const item of validatedItems) {
+      const stockUpdateResult = await tx.product.updateMany({
+        where: {
+          id: item.product_id,
+          stock: { gte: item.quantity },
+        },
+        data: {
+          stock: {
+            decrement: item.quantity,
+          },
+        },
+      });
+
+      if (stockUpdateResult.count === 0) {
+        throw new Error(`Insufficient stock for ${item.name}`);
+      }
     }
 
-    // 3) Insert into orders table
-    const [orderRes] = await connection.query(
-      `INSERT INTO orders 
-        (user_id, total, shipping_id, payment_intent_id, payment_status) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [
+    const order = await tx.order.create({
+      data: {
         userId,
         total,
-        shipping_id,
-        payment_intent_id || null,
-        payment_intent_id ? "paid" : "pending",
-      ]
-    );
-    const orderId = orderRes.insertId;
+        status: mapStatusToEnum(payment_status),
+        paymentIntentId: payment_intent_id || null,
+        shippingAddressId: shipping_id || null,
+      },
+      select: { id: true },
+    });
 
-    // 4) Insert into order_items table
-    const itemsValues = items.map((it) => [
-      orderId,
-      it.product_id,
-      it.quantity,
-      it.price,
-    ]);
-    await connection.query(
-      "INSERT INTO order_items (order_id, product_id, quantity, price) VALUES ?",
-      [itemsValues]
-    );
+    await tx.orderItem.createMany({
+      data: validatedItems.map((item) => ({
+        orderId: order.id,
+        productId: item.product_id,
+        quantity: item.quantity,
+        price: item.unit_price,
+      })),
+    });
 
-    // 5) Clear cart
-    await connection.query("DELETE FROM cart WHERE user_id = ?", [userId]);
-
-    await connection.commit();
-    connection.release();
-
-    res.status(201).json({ message: "Order placed successfully", orderId });
-  } catch (err) {
-    if (connection) {
-      try {
-        await connection.rollback();
-      } catch (e) {
-        console.error("Rollback error:", e);
-      }
-      connection.release();
+    if (clearCart) {
+      await tx.cart.deleteMany({ where: { userId } });
     }
-    console.error("❌ Order creation failed:", err);
-    res.status(400).json({ message: err.message || "Order creation failed" });
+
+    return {
+      orderId: order.id,
+      total,
+      alreadyExists: false,
+    };
+  });
+};
+
+exports.createOrder = async (req, res) => {
+  const userId = req.user?.id;
+  const { items, shipping_id = null, payment_intent_id = null } = req.body;
+
+  try {
+    const result = await createOrderWithTransaction({
+      userId,
+      items,
+      shipping_id,
+      payment_intent_id,
+      payment_status: payment_intent_id ? OrderStatus.PAID : OrderStatus.PENDING,
+      clearCart: true,
+    });
+
+    return res.status(201).json({
+      message: result.alreadyExists ? "Order already exists" : "Order placed successfully",
+      id: result.orderId,
+      total: result.total,
+    });
+  } catch (error) {
+    const status = error.message === "Unauthorized" ? 401 : 400;
+    console.error("Order creation failed:", error.message);
+    return res.status(status).json({ message: error.message || "Order creation failed" });
   }
 };
 
-/**
- * Get all orders for the logged-in user
- */
 exports.getOrders = async (req, res) => {
   const userId = req.user?.id;
   if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
   try {
-    const [orders] = await db.query(
-      "SELECT id AS order_id, total, created_at, payment_status FROM orders WHERE user_id = ? ORDER BY created_at DESC",
-      [userId]
-    );
-
-    if (!orders.length) return res.json([]);
-
-    const orderIds = orders.map((o) => o.order_id);
-    const [items] = await db.query(
-      `SELECT oi.order_id, oi.product_id, oi.quantity, oi.price, p.name, p.image
-       FROM order_items oi
-       JOIN products p ON p.id = oi.product_id
-       WHERE oi.order_id IN (?)`,
-      [orderIds]
-    );
-
-    const itemsByOrder = {};
-    items.forEach((it) => {
-      if (!itemsByOrder[it.order_id]) itemsByOrder[it.order_id] = [];
-      itemsByOrder[it.order_id].push({
-        product_id: it.product_id,
-        quantity: it.quantity,
-        price: Number(it.price),
-        name: it.name,
-        image: it.image,
-      });
+    const orders = await prisma.order.findMany({
+      where: { userId },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                image: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
     });
 
-    const result = orders.map((o) => ({
-      order_id: o.order_id,
-      total: Number(o.total),
-      created_at: o.created_at,
-      payment_status: o.payment_status,
-      items: itemsByOrder[o.order_id] || [],
-    }));
-
-    res.json(result);
-  } catch (err) {
-    console.error("❌ DB error fetching orders:", err);
-    res.status(500).json({ message: "Database error" });
+    return res.json(orders.map(serializeOrder));
+  } catch (error) {
+    console.error("DB error fetching orders:", error);
+    return res.status(500).json({ message: "Database error" });
   }
 };
 
-/**
- * Get a single order by ID for the logged-in user
- */
 exports.getOrderById = async (req, res) => {
   const userId = req.user?.id;
-  const orderId = req.params.id;
+  const orderId = Number(req.params.id);
+
   if (!userId) return res.status(401).json({ message: "Unauthorized" });
+  if (!Number.isInteger(orderId) || orderId <= 0) {
+    return res.status(400).json({ message: "Invalid order id" });
+  }
 
   try {
-    const [orders] = await db.query(
-      "SELECT id AS order_id, total, created_at, payment_status FROM orders WHERE id = ? AND user_id = ?",
-      [orderId, userId]
-    );
+    const order = await prisma.order.findFirst({
+      where: {
+        id: orderId,
+        userId,
+      },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                image: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-    if (!orders.length) {
+    if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    const [items] = await db.query(
-      `SELECT oi.product_id, oi.quantity, oi.price, p.name, p.image
-       FROM order_items oi
-       JOIN products p ON p.id = oi.product_id
-       WHERE oi.order_id = ?`,
-      [orderId]
-    );
-
-    res.json({
-      order_id: orders[0].order_id,
-      total: Number(orders[0].total),
-      created_at: orders[0].created_at,
-      payment_status: orders[0].payment_status,
-      items: items.map((i) => ({
-        product_id: i.product_id,
-        quantity: i.quantity,
-        price: Number(i.price),
-        name: i.name,
-        image: i.image,
-      })),
-    });
-  } catch (err) {
-    console.error("❌ DB error get order:", err);
-    res.status(500).json({ message: "Database error" });
+    return res.json(serializeOrder(order));
+  } catch (error) {
+    console.error("DB error get order:", error);
+    return res.status(500).json({ message: "Database error" });
   }
 };
+
+exports.createOrderWithTransaction = createOrderWithTransaction;
+exports.prepareValidatedItems = prepareValidatedItems;

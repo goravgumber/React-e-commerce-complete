@@ -1,4 +1,3 @@
-// src/pages/LoginPage.js
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -23,9 +22,9 @@ const LoginPage = () => {
 
     try {
       await login(form.email, form.password);
-      navigate("/"); // Redirect to homepage after successful login
+      navigate("/products");
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      setError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }

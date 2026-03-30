@@ -2,18 +2,16 @@ import React from "react";
 import { useCart } from "../context/CartContext";
 import "./ProductCard.css";
 
+import { IMAGE_BASE_URL } from "../config";
+
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
 
   return (
-    <div
-      className="product-card"
-      tabIndex={0}
-      aria-label={`Product ${product.name}`}
-    >
+    <div className="product-card" tabIndex={0} aria-label={`Product ${product.name}`}>
       <div className="image-wrapper">
         <img
-          src={`http://localhost:5000/images/${product.image}`}
+          src={`${IMAGE_BASE_URL}/${product.image}`}
           alt={product.name}
           className="product-image"
           loading="lazy"
